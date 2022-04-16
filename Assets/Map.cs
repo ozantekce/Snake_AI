@@ -5,7 +5,9 @@ using UnityEngine;
 public class Map : MonoBehaviour
 {
     [SerializeField]
-    GameObject head;
+    GameObject head,tail,tail1;
+    
+    Queue<GameObject> queue;
 
     GameObject[][] points;
 
@@ -26,8 +28,13 @@ public class Map : MonoBehaviour
                 points[i][j] = transform.GetChild(i).transform.GetChild(j).gameObject;
             }
         }
-
-        head.transform.position = points[0][0].transform.position;
+        queue = new Queue<GameObject>();
+        queue.Enqueue(tail1);
+        queue.Enqueue(tail);
+        
+        head.transform.position = points[headX][headY].transform.position;
+        tail.transform.position = points[0][1].transform.position;
+        tail1.transform.position = points[0][0].transform.position;
 
     }
     
@@ -39,7 +46,7 @@ public class Map : MonoBehaviour
     private Direction currentDirection = Direction.left;
 
 
-    int headX=0,headY=0;
+    int headX=0,headY=2;
 
     float time=0;
     float delay=1f;
@@ -83,6 +90,9 @@ public class Map : MonoBehaviour
 
     private void Move(){
 
+        GameObject last = queue.Dequeue();
+        last.transform.position = points[headX][headY].transform.position;
+        queue.Enqueue(last);
         if (currentDirection == Direction.left)
         {
             headY++;
@@ -112,6 +122,8 @@ public class Map : MonoBehaviour
         head.transform.position = points[headX][headY].transform.position;
 
     }
+
+
 
 
 }
