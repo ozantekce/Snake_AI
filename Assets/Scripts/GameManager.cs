@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.UIElements;
 
 public class GameManager : MonoBehaviour
 {
@@ -19,12 +18,16 @@ public class GameManager : MonoBehaviour
 
     public Sprite headSprite;
     public Sprite tailSprite;
+    public Sprite foodSprite;
 
     public RectTransform leftUpRef;
 
 
 
     public Head head;
+
+    public GameObject food;
+    
     private void Awake()
     {
         instance = this;
@@ -68,6 +71,16 @@ public class GameManager : MonoBehaviour
         head.Image.sprite = headSprite;
         head.Image.rectTransform.sizeDelta = leftUpRef.sizeDelta;
 
+
+
+        food = new GameObject("Food");
+        food.transform.SetParent(canvas);
+        Image img = food.AddComponent<Image>();
+        img.sprite = foodSprite;
+        img.rectTransform.sizeDelta = leftUpRef.sizeDelta;
+
+        CreateFood();
+
         MenuScreen.SetActive(false);
 
     }
@@ -79,6 +92,7 @@ public class GameManager : MonoBehaviour
     private float elapsedTime;
 
 
+    
 
     Direction dir = Direction.None;
     private void Update()
@@ -117,6 +131,31 @@ public class GameManager : MonoBehaviour
     }
 
 
+
+    public Grid foodGrid;
+    
+    public void CreateFood()
+    {
+        foodGrid = GetRandomGrid();
+        food.transform.position = foodGrid.transform.position;
+    }
+
+
+    private Grid GetRandomGrid()
+    {
+        int x, y;
+        do
+        {
+            x = Random.Range(0,grids.Length);
+            y = Random.Range(0, grids[0].Length);
+            if (grids[x][y].Empty)
+            {
+                return grids[x][y];
+            }
+
+        } while (true);
+
+    }
 
 
     public static GameManager Instance { get => instance; set => instance = value; }

@@ -24,22 +24,12 @@ public class Head : MonoBehaviour
 
     }
 
-    private int countter = 1;
-
     public void Move(Direction direction)
     {
         if (!alive)
             return;
 
-        countter++;
-        if(countter ==5)
-        {
-            if(lastTail !=null)
-                AddTail(lastTail.grid);
-            else
-                AddTail(currentGrid);
-            countter = 0;
-        }
+
 
         lastGrid = currentGrid;
         if(lastDirection == ~direction || direction == Direction.None)
@@ -108,6 +98,17 @@ public class Head : MonoBehaviour
             }
         }
         lastDirection = direction;
+
+        if(GameManager.Instance.foodGrid == currentGrid)
+        {
+            if (lastTail != null)
+                AddTail(lastTail.grid);
+            else
+                AddTail(lastGrid);
+
+            GameManager.Instance.CreateFood();
+        }
+
 
         MoveTail(lastGrid);
 
@@ -194,5 +195,6 @@ public class Head : MonoBehaviour
         public GameObject go;
 
     }
+
 
 }
