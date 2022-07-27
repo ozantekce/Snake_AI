@@ -8,11 +8,11 @@ public class GameManager : MonoBehaviour
 
     private static GameManager instance;    
    
-    public int cols;
     public int rows;
+    public int cols;
 
 
-    public Grid[][] grids;
+    public Slot[][] slots;
 
     public Sprite gridSprite;
 
@@ -22,7 +22,9 @@ public class GameManager : MonoBehaviour
 
     public RectTransform leftUpRef;
 
+    public Transform canvas;
 
+    public GameObject tailsGO;
 
     public Head head;
 
@@ -35,41 +37,34 @@ public class GameManager : MonoBehaviour
     }
 
 
-    private void Start()
-    {
-        //Transform canvas = FindObjectOfType<Canvas>().transform;
 
-
-    }
-
-    private bool gameCreated = false;
+    public bool gameOver = false;
+    public bool gameCreated = false;
     public void CreateGame(GameObject button)
     {
 
         GameObject MenuScreen = button.transform.parent.gameObject;
         InputField rowTextField = MenuScreen.transform.GetChild(0).GetComponent<InputField>();
         InputField colTextField = MenuScreen.transform.GetChild(1).GetComponent<InputField>();
-        cols = int.Parse(colTextField.text);
-        rows = int.Parse(rowTextField.text);
+        rows = int.Parse(colTextField.text);
+        cols = int.Parse(rowTextField.text);
 
         gameCreated = true;
-        Transform canvas = FindObjectOfType<Canvas>().transform;
 
-        leftUpRef.sizeDelta = new Vector2(Screen.height / (rows * 1f), Screen.width / (cols * 1f));
+        leftUpRef.sizeDelta = new Vector2(Screen.height / (cols * 1f), Screen.width / (rows * 1f));
         leftUpRef.position = new Vector2(leftUpRef.sizeDelta.x / 2, Screen.width - leftUpRef.sizeDelta.y / 2);
 
 
-        grids = GridCreater.CreateGrids(canvas, leftUpRef, cols, rows, gridSprite);
+        slots = GameBuilder.CreateSlots(canvas, leftUpRef, rows, cols, gridSprite);
 
 
+        tailsGO = new GameObject("Tails");
+        tailsGO.transform.SetParent(canvas);
 
         GameObject headGO = new GameObject("Head");
         headGO.transform.SetParent(canvas);
         head = headGO.AddComponent<Head>();
-        head.CurrentGrid = grids[0][0];
-        head.transform.position = head.CurrentGrid.transform.position;
-        head.Image.sprite = headSprite;
-        head.Image.rectTransform.sizeDelta = leftUpRef.sizeDelta;
+        head.SetCurrentSlot(slots[0][0]);
 
 
 
@@ -80,13 +75,14 @@ public class GameManager : MonoBehaviour
         img.rectTransform.sizeDelta = leftUpRef.sizeDelta;
 
         CreateFood();
+        
 
         MenuScreen.SetActive(false);
 
     }
 
-    private const float MinGameSpeed = 5;
-    [Range(1.0f, 10.0f)]
+    private const float MinGameSpeed = 1;
+    [Range(1.0f, 100.0f)]
     public float gameSpeed=1;
 
     private float elapsedTime;
@@ -97,9 +93,21 @@ public class GameManager : MonoBehaviour
     Direction dir = Direction.None;
     private void Update()
     {
+        if (gameOver)
+            return;
+        
         if (!gameCreated)
             return;
 
+        /*
+        elapsedTime += Time.deltaTime;
+        if (elapsedTime > MinGameSpeed / gameSpeed)
+        {
+            elapsedTime = 0;
+            head.ExecuteRoute();
+        }
+        */
+        
         int up = (int)Input.GetAxisRaw("Vertical");
         int right = (int)Input.GetAxisRaw("Horizontal");
 
@@ -132,31 +140,52 @@ public class GameManager : MonoBehaviour
 
 
 
-    public Grid foodGrid;
+    public Slot foodSlot;
     
     public void CreateFood()
     {
-        foodGrid = GetRandomGrid();
-        food.transform.position = foodGrid.transform.position;
+        foodSlot = GetRandomSlot();
+        food.transform.position = foodSlot.transform.position;
+        
     }
 
 
-    private Grid GetRandomGrid()
+    private List<Slot> emptySlots = new List<Slot>();
+    private Slot GetRandomSlot()
     {
-        int x, y;
-        do
-        {
-            x = Random.Range(0,grids.Length);
-            y = Random.Range(0, grids[0].Length);
-            if (grids[x][y].Empty)
-            {
-                return grids[x][y];
-            }
 
-        } while (true);
+        emptySlots.Clear();
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            for (int j = 0; j < slots[0].Length; j++)
+            {
+                if(slots[i][j].GetCurrentNode() == null)
+                    emptySlots.Add(slots[i][j]);
+            }
+        }
+
+        if(emptySlots.Count == 0)
+        {
+            gameOver = true;
+            return null;
+        }
+        else
+        {
+            int randomIndex = Random.Range(1, emptySlots.Count);
+            return emptySlots[randomIndex];
+
+        }
 
     }
 
+
+
+    public void GameSpeed(string s)
+    {
+
+        gameSpeed = int.Parse(s);
+    }
 
     public static GameManager Instance { get => instance; set => instance = value; }
 

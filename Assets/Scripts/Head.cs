@@ -1,50 +1,171 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Head : MonoBehaviour
+public class Head : SnakeNode
 {
-    [SerializeField]
-    private Grid currentGrid;
-    private Grid lastGrid;
 
     private Direction lastDirection = Direction.Right;
-
-
-    private Image image;
-    public Grid CurrentGrid { get => currentGrid; set => currentGrid = value; }
-    public Image Image { get => image; set => image = value; }
-
+    [SerializeField]
     private bool alive = true;
+
+    private Tail firstTail, lastTail;
+
+    private Slot headLastSlot;
+
+    private int limit = 5;
+    private Queue<Slot> lastSlots = new Queue<Slot>();
+
+    private void AddLastSlot()
+    {
+        if (lastTail == null)
+        {
+            lastSlots.Enqueue(GetCurrentSlot());
+            if(lastSlots.Count > limit) { lastSlots.Dequeue(); }
+        }
+        else
+        {
+            lastSlots.Enqueue(lastTail.GetCurrentSlot());
+            if (lastSlots.Count > limit) { lastSlots.Dequeue(); }
+        }
+
+        /*
+        foreach (Slot ls in lastSlots)
+        {
+            Debug.Log(ls);
+        }
+        */
+    }
+
 
     private void Awake()
     {
-        image = gameObject.AddComponent<Image>();
+        base.Awake();
+        Image.sprite = GameManager.Instance.headSprite;
+        Image.rectTransform.sizeDelta = GameManager.Instance.leftUpRef.sizeDelta;
+
+
+         gridArea = new bool[GameManager.Instance.rows][];
+        for (int i = 0; i < gridArea.Length; i++)
+        {
+            gridArea[i] = new bool[GameManager.Instance.cols];
+        }
+    }
+
+
+    private bool[][] gridArea;
+
+    private void ResetGridArea()
+    {
+        for (int i = 0; i < gridArea.Length; i++)
+        {
+            for (int j = 0; j < gridArea[i].Length; j++)
+            {
+                if (GameManager.Instance.slots[j][i].GetCurrentNode() == null)
+                {
+                    gridArea[j][i] = false;
+                }
+                else
+                {
+                    gridArea[j][i] = true;
+                }
+            }
+        }
 
     }
 
+    private List<Slot> GetSnakeSlots()
+    {
+        List<Slot> slots = new List<Slot>();
+        
+        if (lastTail != null)
+        {
+            Tail current = lastTail;
+            while(current!=null)
+            {
+                slots.Add(current.GetCurrentSlot());
+                current = current.NextTail;
+            }
+        }
+        slots.Add(GetCurrentSlot());
+        return slots;
+
+    }
+
+
+    private void ExecuteMovementOnGridArea(Direction dir, List<Slot> snakeSlots)
+    {
+        
+        if(dir == Direction.Left)
+        {
+            gridArea[snakeSlots[0].LeftNeighbor.X][snakeSlots[0].LeftNeighbor.Y] = true;
+            if(snakeSlots.Count>1)
+                gridArea[snakeSlots[snakeSlots.Count-1].X][snakeSlots[snakeSlots.Count-1].Y] = false;
+            else
+                gridArea[snakeSlots[0].X][snakeSlots[0].Y] = false;
+
+            snakeSlots.Add(snakeSlots[0]);
+
+            if (snakeSlots.Count > 1)
+            {
+                snakeSlots.RemoveAt(snakeSlots.Count-1);
+            }
+        }
+        else if(dir == Direction.Right)
+        {
+            gridArea[snakeSlots[0].RightNeighbor.X][snakeSlots[0].RightNeighbor.Y] = true;
+            if (snakeSlots.Count > 1)
+                gridArea[snakeSlots[snakeSlots.Count - 1].X][snakeSlots[snakeSlots.Count - 1].Y] = false;
+            else
+                gridArea[snakeSlots[0].X][snakeSlots[0].Y] = false;
+
+        }
+        else if(dir == Direction.Up)
+        {
+            gridArea[snakeSlots[0].UpNeighbor.X][snakeSlots[0].UpNeighbor.Y] = true;
+            if (snakeSlots.Count > 1)
+                gridArea[snakeSlots[snakeSlots.Count - 1].X][snakeSlots[snakeSlots.Count - 1].Y] = false;
+            else
+                gridArea[snakeSlots[0].X][snakeSlots[0].Y] = false;
+
+        }
+        else if(dir == Direction.Down) 
+        {
+            gridArea[snakeSlots[0].DownNeighbor.X][snakeSlots[0].DownNeighbor.Y] = true;
+            if (snakeSlots.Count > 1)
+                gridArea[snakeSlots[snakeSlots.Count - 1].X][snakeSlots[snakeSlots.Count - 1].Y] = false;
+            else
+                gridArea[snakeSlots[0].X][snakeSlots[0].Y] = false;
+
+        }
+
+    }
+    
+
+
+
     public void Move(Direction direction)
     {
+
         if (!alive)
             return;
 
 
+        AddLastSlot();
+        headLastSlot = GetCurrentSlot();
 
-        lastGrid = currentGrid;
-        if(lastDirection == ~direction || direction == Direction.None)
+        if (lastDirection == ~direction || direction == Direction.None)
         {
             direction = lastDirection;
         }
 
         if(direction == Direction.Left)
         {
-            if(currentGrid.LeftNeighbor != null && currentGrid.LeftNeighbor.Empty)
+            if(GetCurrentSlot().LeftNeighbor != null && GetCurrentSlot().LeftNeighbor.GetCurrentNode() == null)
             {
-                currentGrid.Empty = true;
-                currentGrid = currentGrid.LeftNeighbor;
-                transform.position = currentGrid.transform.position;
-                currentGrid.Empty = false;
+                SetCurrentSlot(GetCurrentSlot().LeftNeighbor);
             }
             else
             {
@@ -54,12 +175,9 @@ public class Head : MonoBehaviour
         }
         else if(direction == Direction.Right)
         {
-            if (currentGrid.RightNeighbor != null && currentGrid.RightNeighbor.Empty)
+            if (GetCurrentSlot().RightNeighbor != null && GetCurrentSlot().RightNeighbor.GetCurrentNode() == null)
             {
-                currentGrid.Empty = true;
-                currentGrid = currentGrid.RightNeighbor;
-                transform.position = currentGrid.transform.position;
-                currentGrid.Empty = false;
+                SetCurrentSlot(GetCurrentSlot().RightNeighbor);
             }
             else
             {
@@ -69,12 +187,9 @@ public class Head : MonoBehaviour
         }
         else if(direction == Direction.Up)
         {
-            if (currentGrid.UpNeighbor != null && currentGrid.UpNeighbor.Empty)
+            if (GetCurrentSlot().UpNeighbor != null && GetCurrentSlot().UpNeighbor.GetCurrentNode() == null)
             {
-                currentGrid.Empty = true;
-                currentGrid = currentGrid.UpNeighbor;
-                transform.position = currentGrid.transform.position;
-                currentGrid.Empty = false;
+                SetCurrentSlot(GetCurrentSlot().UpNeighbor);
             }
             else
             {
@@ -84,12 +199,9 @@ public class Head : MonoBehaviour
         }
         else if(direction == Direction.Down)
         {
-            if (currentGrid.DownNeighbor != null && currentGrid.DownNeighbor.Empty)
+            if (GetCurrentSlot().DownNeighbor != null && GetCurrentSlot().DownNeighbor.GetCurrentNode() == null)
             {
-                currentGrid.Empty = true;
-                currentGrid = currentGrid.DownNeighbor;
-                transform.position = currentGrid.transform.position;
-                currentGrid.Empty = false;
+                SetCurrentSlot(GetCurrentSlot().DownNeighbor);
             }
             else
             {
@@ -99,20 +211,24 @@ public class Head : MonoBehaviour
         }
         lastDirection = direction;
 
-        if(GameManager.Instance.foodGrid == currentGrid)
+        MoveTails();
+        bool foodAte = false;
+        if (GameManager.Instance.foodSlot == GetCurrentSlot())
         {
-            if (lastTail != null)
-                AddTail(lastTail.grid);
-            else
-                AddTail(lastGrid);
-
-            GameManager.Instance.CreateFood();
+            AddTail();
+            foodAte = true;
         }
 
 
-        MoveTail(lastGrid);
+        
 
+        if (foodAte)
+        {
+            GameManager.Instance.CreateFood();
+        }
+        
     }
+
 
 
     private void Die()
@@ -120,81 +236,52 @@ public class Head : MonoBehaviour
         alive = false;
     }
 
-    private void AddTail(Grid grid)
+
+    private void AddTail()
     {
+
 
         if (firstTail == null)
         {
-            Transform canvas = FindObjectOfType<Canvas>().transform;
-            firstTail = new Tail();
+            GameObject tempGO = new GameObject();
+            firstTail = tempGO.AddComponent<Tail>();
             lastTail = firstTail;
-            lastTail.go = new GameObject();
-            Image img = lastTail.go.AddComponent<Image>();
-            img.sprite = GameManager.Instance.tailSprite;
-            img.rectTransform.sizeDelta = image.rectTransform.sizeDelta;
-            lastTail.go.transform.SetParent(canvas);
-            lastTail.go.transform.position = grid.transform.position;
-            lastTail.grid = grid;
-            lastTail.grid.Empty = false;
-
+            lastTail.SetCurrentSlot(lastSlots.ElementAt(lastSlots.Count - 1));
+            lastTail.transform.SetParent(GameManager.Instance.tailsGO.transform);
         }
         else
         {
-            Transform canvas = FindObjectOfType<Canvas>().transform;
-            Tail temp = new Tail();
-            temp.go = new GameObject();
-            Image img = temp.go.AddComponent<Image>();
-
-            img.sprite= GameManager.Instance.tailSprite;
-            img.rectTransform.sizeDelta = image.rectTransform.sizeDelta;
-            temp.go.transform.SetParent(canvas);
-            temp.go.transform.position = grid.transform.position;
-
-            temp.next = lastTail;
+            GameObject tempGO = new GameObject();
+            tempGO.transform.SetParent(GameManager.Instance.tailsGO.transform);
+            Tail temp = tempGO.AddComponent<Tail>();
+            temp.NextTail = lastTail;
+            temp.SetCurrentSlot(lastSlots.ElementAt(lastSlots.Count - 1));
             lastTail = temp;
-            lastTail.grid = grid;
-            lastTail.grid.Empty = false;
-
+            lastTail.transform.SetParent(GameManager.Instance.tailsGO.transform);
         }
 
     }
 
-
     // O(1) complexity 
-    private void MoveTail(Grid grid)
+    private void MoveTails()
     {
-
+        
         if (firstTail == null)
             return;
-
-        if(lastTail.grid != null)
-            lastTail.grid.Empty = true;
-
-        lastTail.grid = lastGrid;
-        lastTail.go.transform.position = lastGrid.transform.position;
-
-        lastGrid.Empty = false;
-
+        
         Tail temp = lastTail;
-        firstTail.next = temp;
-        lastTail = lastTail.next;
+        firstTail.NextTail = temp;
+        lastTail = lastTail.NextTail;
         firstTail = temp;
-        firstTail.next = null;
+        firstTail.NextTail = null;
+        firstTail.SetCurrentSlot(headLastSlot);
+
+    }
+
+
+
     
-    }
 
-
-    private Tail firstTail;
-    private Tail lastTail;
-
-    private class Tail
-    {
-
-        public Grid grid;
-        public Tail next;
-        public GameObject go;
-
-    }
 
 
 }
