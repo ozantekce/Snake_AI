@@ -39,7 +39,6 @@ public class GameBuilder : MonoBehaviour
                 
                 currentX += deltaX;
 
-
             }
             currentX = leftUpRef.transform.position.x;
             currentY += deltaY;
