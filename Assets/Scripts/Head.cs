@@ -30,88 +30,42 @@ public class Head : SnakeNode
             lastSlots.Enqueue(lastTail.GetCurrentSlot());
             if (lastSlots.Count > limit) { lastSlots.Dequeue(); }
         }
-
+        /*
         Debug.Log("-----------------------------------------------------");
         foreach (Slot ls in lastSlots)
         {
             Debug.Log(ls);
         }
-        
+        */
     }
 
-    private bool[][] gridArea;
+
     private void Awake()
     {
         base.Awake();
         Image.sprite = GameManager.Instance.headSprite;
         Image.rectTransform.sizeDelta = GameManager.Instance.leftUpRef.sizeDelta;
 
-        gridArea = new bool[GameManager.Instance.rows][];
-        for (int i = 0; i < gridArea.Length; i++)
-        {
-            gridArea[i] = new bool[GameManager.Instance.cols];
-        }
-
     }
 
-    private void ResetGridArea()
-    {
-        for (int i = 0; i < gridArea.Length; i++)
-        {
-            for (int j = 0; j < gridArea[i].Length; j++)
-            {
-                if (GameManager.Instance.slots[j][i].GetCurrentNode() == null)
-                {
-                    gridArea[j][i] = false;
-                }
-                else
-                {
-                    gridArea[j][i] = true;
-                }
-            }
-        }
-
-    }
 
 
     private int D = 10; //Heuristic distance cost per step
     private Slot lastVisitedNode;
 
-    List<Slot> FindThePath(Slot startNode, Slot goalNode,bool deneme)
+    List<Slot> FindThePath(Slot startNode, Slot goalNode, bool [][] gridArea)
     {
-        ResetGridArea();
-        gridArea[goalNode.X][goalNode.Y] = false;
-        gridArea[startNode.X][startNode.Y] = false;
-        /*
-        Slot startNode = GetCurrentSlot();
-        Slot goalNode = GameManager.Instance.foodSlot;
-        */
+
         List<Slot> path = new List<Slot>();
 
-        bool c1 = AStarAlgorithm(startNode, goalNode);
-        PathTracer(startNode, goalNode,path);
+        AStarAlgorithm(startNode, goalNode);
 
-
-        if (deneme && lastTail!=null)
-        {
-            List<Slot> tempPath = new List<Slot>();
-            gridArea[denemeSlot.X][denemeSlot.Y] = false;
-            gridArea[goalNode.X][goalNode.Y] = false;
-            bool c2 = AStarAlgorithm(goalNode, denemeSlot);
-
-            if (!c2)
-                return null;
-            //PathTracer(goalNode, denemeSlot, tempPath);
-
-
-        }
+        PathTracer(startNode,goalNode,path);
 
         return path;
 
     }
 
-    private int maxAStar = 9999;
-    private Slot denemeSlot;
     bool AStarAlgorithm(Slot startNode, Slot goalNode)
     {  
 
@@ -141,15 +95,9 @@ public class Head : SnakeNode
             frontier.Add(startNode);
             HashSet<Slot> explored = new HashSet<Slot>();
             Slot state = null;
-            int counter = 0;
             while (frontier.Count != 0)
             {
-                counter++;
-                if (maxAStar <= counter)
-                {
-                    Debug.Log("Error 1");
-                    return false;
-                }
+
 
                 frontier = frontier.OrderBy(x => x.FCost).ToList();
                 
@@ -161,33 +109,41 @@ public class Head : SnakeNode
 
                 if (state == goalNode)
                 {
-                    denemeSlot = snakeSlots[0];
                     return true;
-
                 }
                 else
                 {
 
                     List<Slot> neighbors = state.Neighbors;
+                    ResetGridArea();
+
+                    snakeSlots = new List<Slot>();
+                    if (lastTail != null)
+                    {
+                        Tail current = lastTail;
+                        while (current != null)
+                        {
+                            snakeSlots.Add(current.GetCurrentSlot());
+                            current = current.NextTail;
+                        }
+                    }
+                    snakeSlots.Add(GetCurrentSlot());
+
                     foreach (Slot neighbor in neighbors)
                     {
                         int tempG = state.gCost + 1;
                         int tempH = GetDistance(neighbor, goalNode);
                         int tempF = tempG + tempH;
-                        if (gridArea[neighbor.X][neighbor.Y] == false && !explored.Contains(neighbor) && !frontier.Contains(neighbor))
+                        if ( (gridArea[neighbor.X][neighbor.Y] == false || snakeSlots[snakeSlots.Count-1] == neighbor)
+                            
+                            && !explored.Contains(neighbor) && !frontier.Contains(neighbor))
                         {
                             gridArea[neighbor.X][neighbor.Y] = true;
-                            if (snakeSlots.Count > 1)
-                                gridArea[snakeSlots[snakeSlots.Count - 1].X][snakeSlots[snakeSlots.Count - 1].Y] = false;
-                            else
-                                gridArea[snakeSlots[0].X][snakeSlots[0].Y] = false;
+
+                            gridArea[snakeSlots[snakeSlots.Count - 1].X][snakeSlots[snakeSlots.Count - 1].Y] = false;
 
                             snakeSlots.Add(neighbor);
-
-                            if (snakeSlots.Count > 1)
-                            {
-                                snakeSlots.RemoveAt(snakeSlots.Count - 1);
-                            }
+                            snakeSlots.RemoveAt(snakeSlots.Count - 1);
 
                             neighbor.ParentSlot = state;
                             neighbor.gCost = tempG;
@@ -236,10 +192,116 @@ public class Head : SnakeNode
     }
 
 
-    [SerializeField]
-    List<Slot> pathToFood = new List<Slot>();
-    [SerializeField]
-    List<Slot> pathToTail = new List<Slot>();
+
+
+    private bool firstTime = true;
+
+
+
+    private List<Slot> path1;
+    private bool path1Finded;
+    private bool[][] gridArea1;
+
+    // path1 bulundugu zaman tail in konumu
+    private Slot path2Goal;
+
+    // path from current pos to food
+    private void FindPath1()
+    {
+        path1Finded = false;
+        Slot first = GetCurrentSlot();
+        Slot goal = GameManager.Instance.foodSlot;
+        gridArea1 = CreateGridArea1();
+        path1 = FindThePath(first, goal, gridArea1);
+
+        if(path1 != null)
+        {
+            path1Finded = true;
+        }
+
+    }
+
+    private bool[][] CreateGridArea1()
+    {
+
+        return null;
+    }
+
+
+
+    private List<Slot> path2;
+    private bool path2Finded;
+    private bool[][] gridArea2;
+    // path from food pos to tail pos
+    private void FindPath2()
+    {
+        path2Finded = false;
+        Slot first = GameManager.Instance.foodSlot;
+        Slot goal = path2Goal;
+        gridArea2 = CreateGridArea2();
+        path2 = FindThePath(first, goal, gridArea2);
+
+        if (path2 != null)
+        {
+            path2Finded = true;
+        }
+
+    }
+
+    private bool[][] CreateGridArea2()
+    {
+
+        return null;
+    }
+
+
+
+
+    // path from current pos to tail pos
+    private List<Slot> path3;
+    private bool path3Finded;
+    private bool[][] gridArea3;
+    private void FindPath3()
+    {
+
+        path3Finded = false;
+        Slot first = GetCurrentSlot();
+        Slot goal = lastSlots.ElementAt(lastSlots.Count - 1);
+        gridArea3 = CreateGridArea3();
+        path3 = FindThePath(first, goal, gridArea3);
+
+        if (path3 != null)
+        {
+            path3Finded = true;
+        }
+
+    }
+
+    private bool[][] CreateGridArea3()
+    {
+
+        return null;
+    }
+
+
+    private void ExecutePath1()
+    {
+
+
+    }
+
+    private void ExecutePath2()
+    {
+
+
+    }
+
+    private void ExecutePath3()
+    {
+
+
+    }
+
 
 
     public void Move(Direction direction)
@@ -249,67 +311,43 @@ public class Head : SnakeNode
             return;
 
 
-        if(pathToFood == null || pathToFood.Count == 0)
+        if (firstTime)
         {
-            pathToFood = FindThePath(GetCurrentSlot(), GameManager.Instance.foodSlot,true);
-        }
-
-        if (pathToTail.Count == 0 && lastTail != null)
-        {
-            Debug.Log("lastt :"+lastSlots.ElementAt(lastSlots.Count - 1));
-            pathToTail = FindThePath(GetCurrentSlot(), lastSlots.ElementAt(lastSlots.Count - 1),false);
-        }
-        
-
-        
-        headLastSlot = GetCurrentSlot();
-
-
-        if(pathToFood != null)
-        {
-            if (pathToFood[0] == GetCurrentSlot().LeftNeighbor)
-            {
-                direction = Direction.Left;
-            }
-            else if (pathToFood[0] == GetCurrentSlot().RightNeighbor)
-            {
-                direction = Direction.Right;
-            }
-            else if (pathToFood[0] == GetCurrentSlot().UpNeighbor)
-            {
-                direction = Direction.Up;
-            }
-            else if (pathToFood[0] == GetCurrentSlot().DownNeighbor)
-            {
-                direction = Direction.Down;
-            }
-            pathToFood.RemoveAt(0);
-            
-
+            FindPath1();
+            ExecutePath1();
         }
         else
         {
-            if (pathToTail[0] == GetCurrentSlot().LeftNeighbor)
+            FindPath1();
+            if (path1Finded)
             {
-                direction = Direction.Left;
+                FindPath2();
+                if (path2Finded)
+                {
+                    ExecutePath1();
+                }
+                else
+                {
+                    FindPath3();
+                    ExecutePath3();
+                }
             }
-            else if (pathToTail[0] == GetCurrentSlot().RightNeighbor)
+            else
             {
-                direction = Direction.Right;
+                FindPath3();
+                ExecutePath3();
             }
-            else if (pathToTail[0] == GetCurrentSlot().UpNeighbor)
-            {
-                direction = Direction.Up;
-            }
-            else if (pathToTail[0] == GetCurrentSlot().DownNeighbor)
-            {
-                direction = Direction.Down;
-            }
-            pathToTail.RemoveAt(0);
 
         }
 
-        pathToTail.Clear();
+
+
+
+
+
+        headLastSlot = GetCurrentSlot();
+
+
 
 
         if (lastDirection == ~direction || direction == Direction.None)
